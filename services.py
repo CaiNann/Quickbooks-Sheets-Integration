@@ -6,18 +6,7 @@ import socketserver
 import base64
 from urllib.parse import urlparse, parse_qs, urlencode
 import secrets
-
-client_id = 'ABELy2kJPVjKIaWycZKD8B9rF1fPLpMyxq5Y5zhgOY8jd5l4Fj'
-client_secret = '05EYhumz1oXvKQqiCOVsVYhCvUZ2OV4Pi688esWL'
-redirect_uri = 'https://0ae3-76-170-113-56.ngrok-free.app/callback'
-environment = 'sandbox'
-token_endpoint = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer'
-authorization_endpoint = 'https://appcenter.intuit.com/connect/oauth2'
-realm_id = '9341452557106265'
-
-scopes = [
-    "com.intuit.quickbooks.accounting"
-]
+import config
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -27,13 +16,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             state = secrets.token_urlsafe(16)
             self.server.csrf_state = state
             params = {
-                'client_id': client_id,
-                'redirect_uri': redirect_uri,
-                'scope': scopes[0],
+                'client_id': config.client_id,
+                'redirect_uri': config.redirect_uri,
+                'scope': config.scopes[0],
                 'response_type': 'code',
                 'state': state,
             }
-            auth_url = f'{authorization_endpoint}?{urlencode(params)}'
+            auth_url = f'{config.authorization_endpoint}?{urlencode(params)}'
             
             self.send_response(302)
             self.send_header('Location', auth_url)
@@ -45,13 +34,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'CSRF Token mismatch')
                 return
-            realm_id = query_components.get('realmId', [''])[0]
+            config.realm_id = query_components.get('realmId', [''])[0]
             code = query_components.get('code', [''])[0]
 
-            auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode('utf-8')
+            auth = base64.b64encode(f"{config.client_id}:{config.client_secret}".encode()).decode('utf-8')
             print(auth)
             post_body = {
-                'url': token_endpoint,
+                'url': config.token_endpoint,
                 'headers': {
                     'Accept': 'application/json',
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -60,7 +49,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 'data': {
                     'grant_type': 'authorization_code',
                     'code': code,
-                    'redirect_uri': redirect_uri,
+                    'redirect_uri': config.redirect_uri,
                 }
             }
 
@@ -68,10 +57,12 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
             if response.status_code == 200:
                 access_token = response.json().get('access_token')
+                refresh_token = response.json().get('refresh_token')
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
-                self.wfile.write(f"Access Token: {access_token}".encode())
+                self.wfile.write(f"Access Token: {access_token}\n\n".encode())
+                self.wfile.write(f'Refresh Token: {refresh_token}'.encode())
             else:
                 self.send_response(500)
                 self.send_header('Content-type', 'text/html')
