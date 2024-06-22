@@ -1,48 +1,55 @@
 from intuitlib.client import AuthClient
 from intuitlib.enums import Scopes
-import ngrok
 import requests
 import http.server
+import socketserver
 import base64
-from urllib.parse import urlparse, parse_qs, quote
-
-listener = ngrok.forward(9000, authtoken_from_env=True)
-print(f"Ingress established at {listener.url()}")
+from urllib.parse import urlparse, parse_qs, urlencode
+import secrets
 
 client_id = 'ABELy2kJPVjKIaWycZKD8B9rF1fPLpMyxq5Y5zhgOY8jd5l4Fj'
 client_secret = '05EYhumz1oXvKQqiCOVsVYhCvUZ2OV4Pi688esWL'
-redirect_uri = 'https://db70-45-48-118-32.ngrok-free.app/callback'
+redirect_uri = 'https://0ae3-76-170-113-56.ngrok-free.app/callback'
 environment = 'sandbox'
 token_endpoint = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer'
 authorization_endpoint = 'https://appcenter.intuit.com/connect/oauth2'
 realm_id = '9341452557106265'
 
-auth_client = AuthClient(client_id, client_secret, redirect_uri, environment)
-
 scopes = [
-    Scopes.ACCOUNTING
+    "com.intuit.quickbooks.accounting"
 ]
 
-auth_url = auth_client.get_authorization_url(scopes)
-print(auth_url)
 class RequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urlparse(self.path)
         query_components = parse_qs(urlparse(self.path).query)
         if parsed_url.path == '/authUri':
-            redirectUrl = '%s
-            ?client_id=%s
-            &redirect_uri=%s
-            &scope={scopes[0]}
-            &response_type=code'
-            self.wfile.write(redirectUrl)
+            state = secrets.token_urlsafe(16)
+            self.server.csrf_state = state
+            params = {
+                'client_id': client_id,
+                'redirect_uri': redirect_uri,
+                'scope': scopes[0],
+                'response_type': 'code',
+                'state': state,
+            }
+            auth_url = f'{authorization_endpoint}?{urlencode(params)}'
+            
+            self.send_response(302)
+            self.send_header('Location', auth_url)
+            self.end_headers()
 
-        if parsed_url.path == '/callback':
+        elif parsed_url.path == '/callback':
+            if self.server.csrf_state != query_components.get('state', [''])[0]:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(b'CSRF Token mismatch')
+                return
             realm_id = query_components.get('realmId', [''])[0]
             code = query_components.get('code', [''])[0]
 
             auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode('utf-8')
-
+            print(auth)
             post_body = {
                 'url': token_endpoint,
                 'headers': {
@@ -52,8 +59,8 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 },
                 'data': {
                     'grant_type': 'authorization_code',
-                    'code': query_components.get('code', [''])[0],
-                    'redirect_uri': redirect_uri
+                    'code': code,
+                    'redirect_uri': redirect_uri,
                 }
             }
 
@@ -70,12 +77,21 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
                 self.wfile.write(f"Error: Token request failed [{response.status_code}]".encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b'Not Found')
+            print(f"Path {self.path} not found")
 
 def start_server():
-    server_address = ('', 9000)  # Choose a port number
-    httpd = http.server.HTTPServer(server_address, RequestHandler)
+    server_address = ('localhost', 9000)
+    httpd = socketserver.TCPServer(server_address, RequestHandler)
     print(f"Server running on port {server_address[1]}")
-    httpd.serve_forever()
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print('\nStopping server...')
+        httpd.server_close()
 
 if __name__ == '__main__':
     start_server()
