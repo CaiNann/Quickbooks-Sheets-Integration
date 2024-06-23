@@ -3,10 +3,11 @@ from intuitlib.enums import Scopes
 import requests
 import http.server
 import socketserver
-import base64
+import hashlib, hmac, base64
 from urllib.parse import urlparse, parse_qs, urlencode
 import secrets
 import config
+import json
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -73,6 +74,53 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'Not Found')
             print(f"Path {self.path} not found")
+    def do_POST(self):
+        parsed_url = urlparse(self.path)
+        content_length = int(self.headers['content-length'])
+        body = self.rfile.read(content_length)
+        payload = json.loads(body.decode('utf-8'))
+        if parsed_url.path == '/webhook':
+            signature = self.headers['intuit-signature']
+            if isValidPayload(signature, body):
+                self.send_response(200, 'Payload is valid')
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                event_notifications = payload['eventNotifications']
+                for notification in event_notifications:
+                    data_change_event = notification['dataChangeEvent']
+                    entities = data_change_event['entities']
+                    for entity in entities:
+                        operation = entity['operation']
+                        estimate_id = entity['id']
+                        if operation == 'Delete':
+                            #deleteEstimate(deleted_id)
+                            print(f'Deleted Estimate ID: {estimate_id}'.encode())
+                        elif operation == 'Create':
+                            #createEstimate(estimate_id)
+                            print(f'Created Estimate ID: {estimate_id}'.encode())
+                        elif operation == 'Update':
+                            #updateEstimate(estimate_id)
+                            print(f'Updated Estimate ID: {estimate_id}'.encode())
+                    
+
+def isValidPayload(signature, payload):
+    key = config.webhooks_verifier
+    key_to_verify = key.encode('ascii')
+    hashed = hmac.new(key_to_verify, payload, hashlib.sha256).digest()
+    hashed_base64 = base64.b64encode(hashed).decode()
+
+    if signature == hashed_base64:
+        return True
+    return False
+
+#def deleteEstimate(id):
+    super.wfile.write(f'Deleted Estimate ID: {id}'.encode())
+
+#def createEstimate(id):
+    super.wfile.write(f'Created Estimate ID: {id}'.encode())
+
+#def updateEstimate(id):
+    super.wfile.write(f'Updated Estimate ID: {id}'.encode())
 
 def start_server():
     server_address = ('localhost', 9000)
