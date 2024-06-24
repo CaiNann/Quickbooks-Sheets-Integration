@@ -1,5 +1,7 @@
 from intuitlib.client import AuthClient
 from intuitlib.enums import Scopes
+from google.oauth2 import service_account
+import googleapiclient.discovery
 import requests
 import http.server
 import socketserver
@@ -9,6 +11,9 @@ import secrets
 import config
 import json
 
+googleCredentials = service_account.Credentials.from_service_account_file(config.google['service_account_file'], scopes=config.google['scopes'])
+sheetsService = googleapiclient.discovery.build('sheets', 'v4', credentials=googleCredentials)
+
 class RequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urlparse(self.path)
@@ -17,13 +22,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             state = secrets.token_urlsafe(16)
             self.server.csrf_state = state
             params = {
-                'client_id': config.client_id,
-                'redirect_uri': config.redirect_uri,
-                'scope': config.scopes[0],
+                'client_id': config.quickbooks['client_id'],
+                'redirect_uri': config.quickbooks['redirect_uri'],
+                'scope': config.quickbooks['scopes'[0]],
                 'response_type': 'code',
                 'state': state,
             }
-            auth_url = f'{config.authorization_endpoint}?{urlencode(params)}'
+            auth_url = f'{config.quickbooks['authorization_endpoint']}?{urlencode(params)}'
             
             self.send_response(302)
             self.send_header('Location', auth_url)
@@ -35,13 +40,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'CSRF Token mismatch')
                 return
-            config.realm_id = query_components.get('realmId', [''])[0]
+            config.quickbooks['realm_id'] = query_components.get('realmId', [''])[0]
             code = query_components.get('code', [''])[0]
 
-            auth = base64.b64encode(f"{config.client_id}:{config.client_secret}".encode()).decode('utf-8')
+            auth = base64.b64encode(f"{config.quickbooks['client_id']}:{config.quickbooks['client_secret']}".encode()).decode('utf-8')
             print(auth)
             post_body = {
-                'url': config.token_endpoint,
+                'url': config.quickbooks['token_endpoint'],
                 'headers': {
                     'Accept': 'application/json',
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -50,7 +55,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 'data': {
                     'grant_type': 'authorization_code',
                     'code': code,
-                    'redirect_uri': config.redirect_uri,
+                    'redirect_uri': config.quickbooks['redirect_uri'],
                 }
             }
 
@@ -104,7 +109,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                     
 
 def isValidPayload(signature, payload):
-    key = config.webhooks_verifier
+    key = config.quickbooks['webhooks_verifier']
     key_to_verify = key.encode('ascii')
     hashed = hmac.new(key_to_verify, payload, hashlib.sha256).digest()
     hashed_base64 = base64.b64encode(hashed).decode()
@@ -122,6 +127,10 @@ def isValidPayload(signature, payload):
 #def updateEstimate(id):
     super.wfile.write(f'Updated Estimate ID: {id}'.encode())
 
+def getSheet(id):
+    sheet_id = sheetsService.get(id)
+    print(sheet_id)
+
 def start_server():
     server_address = ('localhost', 9000)
     httpd = socketserver.TCPServer(server_address, RequestHandler)
@@ -134,3 +143,4 @@ def start_server():
 
 if __name__ == '__main__':
     start_server()
+    getSheet('1fRHggwg7dhvj7447InWxbL2qY7mQLcys13e0iTN2E0s')
