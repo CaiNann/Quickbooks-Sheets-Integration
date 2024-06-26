@@ -102,11 +102,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                             print(f'Deleted Estimate ID: {estimate_id}'.encode())
                         elif operation == 'Create':
                             access_token = self.session.get('access_token')
-                            getEstimateData(estimate_id, access_token)
-                            #appendSheet('1fRHggwg7dhvj7447InWxbL2qY7mQLcys13e0iTN2E0s', 'Open Order Report', )
+                            refresh_token = self.session.get('refresh_token')
+                            estimateData = getEstimateData(estimate_id, access_token, refresh_token)
+                            appendSheet('1fRHggwg7dhvj7447InWxbL2qY7mQLcys13e0iTN2E0s', 'Open Order Report', estimateData)
                         elif operation == 'Update':
                             #updateEstimate(estimate_id)
                             print(f'Updated Estimate ID: {estimate_id}'.encode())
+                            print(getSheetValues('1fRHggwg7dhvj7447InWxbL2qY7mQLcys13e0iTN2E0s', 'Open Order Report!A1138:E1140'))
                     
 def refresh_token(refresh_token):
     post_body = {
@@ -136,8 +138,8 @@ def isValidPayload(signature, payload):
         return True
     return False
 
-def getEstimateData(id, auth_token, refresh_token):
-    url = f'{config.quickbooks['sandbox_base_url']}/v3/company/{config.quickbooks['realm_id']}/{id}?minorversion=70'
+def getEstimateData(id, auth_token, refreshToken):
+    url = f'{config.quickbooks['sandbox_base_url']}/v3/company/{config.quickbooks['realm_id']}/estimate/{id}'
     headers = {
         'Accept': 'application/json',
         'Authorization': f'Bearer {auth_token}',
@@ -146,17 +148,59 @@ def getEstimateData(id, auth_token, refresh_token):
         response = requests.get(url, headers)
         response.raise_for_status()
         data = response.json()
-        print(data)
+        salesOrderNum = data.get('Estimate').get('Custom field')
+        if salesOrderNum == None:
+            salesOrderNum = ''
+        else:
+            salesOrderNum = salesOrderNum[1].get('String value')
+        date = data.get('Estimate').get('MetaData').get('CreateTime')
+        customer = data.get('Estimate').get('CustomerRef').get('name')
+        purchaseOrderNum = data.get('Estimate').get('Custom field')
+        if purchaseOrderNum == None:
+            purchaseOrderNum = ''
+        else:
+            purchaseOrderNum = purchaseOrderNum[0].get('String value')
+        description = []
+        items = data.get('Estimate').get('Line')
+        for item in items:
+            print(item.get('Description'))
+            if item.get('Description') != None:
+                description.append(item.get('Description'))
+        if len(description) != 0:
+            description = ', '.join(description)
+        filteredData = [salesOrderNum, date, customer, purchaseOrderNum, description]
+        return filteredData
     except requests.exceptions.HTTPError as http_err:
         if response.status_code == 401:
-            new_token = refresh_token(refresh_token)
+            new_token = refresh_token(refreshToken)
             if new_token:
-                self.session['access_token'] = new_token
+                RequestHandler.session['access_token'] = new_token
                 headers['Authorization'] = f'Bearer {new_token}'
                 response = requests.get(url, headers=headers)
                 response.raise_for_status()
                 data = response.json()
-                print(data)
+                salesOrderNum = data.get('Estimate').get('Custom field')
+                if salesOrderNum == None:
+                    salesOrderNum = ''
+                else:
+                    salesOrderNum = salesOrderNum[1].get('String value')
+                date = data.get('Estimate').get('MetaData').get('CreateTime')
+                customer = data.get('Estimate').get('CustomerRef').get('name')
+                purchaseOrderNum = data.get('Estimate').get('Custom field')
+                if purchaseOrderNum == None:
+                    purchaseOrderNum = ''
+                else:
+                    purchaseOrderNum = purchaseOrderNum[0].get('String value')
+                description = []
+                items = data.get('Estimate').get('Line')
+                for item in items:
+                    print(item.get('Description'))
+                    if item.get('Description') != None:
+                        description.append(item.get('Description'))
+                if len(description) != 0:
+                    description = ', '.join(description)
+                filteredData = [salesOrderNum, date, customer, purchaseOrderNum, description]
+                return filteredData
             else:
                 print("Failed to refresh token.")
         else:
@@ -172,7 +216,13 @@ def getSheetValues(id, range):
     return sheet_values
 
 def appendSheet(id, range, values):
-    sheet_response = sheetsService.spreadsheets().values().append(spreadsheetId=id, range=range, values=values).execute()
+    sheet_response = sheetsService.spreadsheets().values().append(
+        spreadsheetId=id, 
+        range=range, 
+        body={
+            'values': [values]
+        }
+    ).execute()
     return sheet_response
 
 def start_server():
