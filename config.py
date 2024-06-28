@@ -13,6 +13,13 @@ quickbooks = {
 }
 
 google = {
-    'scopes' : ['https://www.googleapis.com/auth/spreadsheets'],
-    'service_account_file' : 'googleServiceAccount.json'
+    'scopes' : ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/drive.file'],
+    'service_account_file' : 'googleServiceAccount.json',
+    'odfl_link': 'https://www.odfl.com/us/en/tools/trace-track-ltl-freight/trace.html?proNumbers=',
+    'fedex_link': 'https://www.fedex.com/fedextrack/?tracknumbers=',
+    'ups_link': 'http://wwwapps.ups.com/WebTracking/track?track=yes&trackNums=',
+    'daylight_link': 'https://mydaylight.dylt.com/external/shipment?probill=',
+    'spreadsheet_id': '1fRHggwg7dhvj7447InWxbL2qY7mQLcys13e0iTN2E0s',
+    'sheet_id': '1342435178',
+    'append_table_range': 'Open Order Report!A:E'
 }
