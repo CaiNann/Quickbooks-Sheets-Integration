@@ -21,5 +21,7 @@ google = {
     'daylight_link': 'https://mydaylight.dylt.com/external/shipment?probill=',
     'spreadsheet_id': '1fRHggwg7dhvj7447InWxbL2qY7mQLcys13e0iTN2E0s',
     'sheet_id': '1342435178',
-    'append_table_range': 'Open Order Report!A:E'
+    'sheet_name': 'Open Order Report',
+    'append_table_range': 'Open Order Report!A:E',
+    'data_lookup_range': 'Open Order Report!D:D'
 }

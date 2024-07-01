@@ -81,19 +81,16 @@ def get_estimate_data(id, auth_token, refresh_token):
         response = requests.get(url, headers)
         response.raise_for_status()
         data = response.json()
-        sales_order_num = data.get('Estimate').get('Custom field')
+        sales_order_num = data.get('Estimate').get('CustomField')[1].get('StringValue')
         if sales_order_num == None:
-            sales_order_num = ''
-        else:
-            sales_order_num = sales_order_num[1].get('String value')
+            sales_order_num = ' '
+        print(sales_order_num)
         date = data.get('Estimate').get('MetaData').get('CreateTime')
         date = format_date(date)
         customer = data.get('Estimate').get('CustomerRef').get('name')
-        purchase_order_num = data.get('Estimate').get('Custom field')
+        purchase_order_num = data.get('Estimate').get('CustomField')[0].get('StringValue')
         if purchase_order_num == None:
-            purchase_order_num = ''
-        else:
-            purchase_order_num = purchase_order_num[0].get('String value')
+            purchase_order_num = ' '
         description = []
         items = data.get('Estimate').get('Line')
         for item in items:
@@ -112,19 +109,16 @@ def get_estimate_data(id, auth_token, refresh_token):
                 response = requests.get(url, headers=headers)
                 response.raise_for_status()
                 data = response.json()
-                salesOrderNum = data.get('Estimate').get('Custom field')
-                if salesOrderNum == None:
-                    salesOrderNum = ''
-                else:
-                    salesOrderNum = salesOrderNum[1].get('String value')
+                sales_order_num = data.get('Estimate').get('CustomField')[1].get('StringValue')
+                if sales_order_num == None:
+                    sales_order_num = ' '
+                print(sales_order_num)
                 date = data.get('Estimate').get('MetaData').get('CreateTime')
                 date = format_date(date)
                 customer = data.get('Estimate').get('CustomerRef').get('name')
-                purchaseOrderNum = data.get('Estimate').get('Custom field')
-                if purchaseOrderNum == None:
-                    purchaseOrderNum = ''
-                else:
-                    purchaseOrderNum = purchaseOrderNum[0].get('String value')
+                purchase_order_num = data.get('Estimate').get('CustomField')[0].get('StringValue')
+                if purchase_order_num == None:
+                    purchase_order_num = ' '
                 description = []
                 items = data.get('Estimate').get('Line')
                 for item in items:
@@ -132,7 +126,7 @@ def get_estimate_data(id, auth_token, refresh_token):
                         description.append(item.get('Description'))
                 if len(description) != 0:
                     description = ', '.join(description)
-                filteredData = [salesOrderNum, date, customer, purchaseOrderNum, description]
+                filteredData = [sales_order_num, date, customer, purchase_order_num, description]
                 return filteredData
             else:
                 print("Failed to refresh token.")

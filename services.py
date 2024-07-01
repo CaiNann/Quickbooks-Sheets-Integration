@@ -59,6 +59,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 refresh_token = self.session.get('refresh_token')
                 entities = parse_payload(payload)
                 for entity in entities:
+                    print(entity['lastUpdated'])
                     operation = entity['operation']
                     estimate_id = entity['id']
                     estimate_data = get_estimate_data(estimate_id, access_token, refresh_token)
@@ -67,8 +68,9 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                     elif operation == 'Create':
                         append_sheet(config.google['spreadsheet_id'], config.google['append_table_range'], estimate_data)
                     elif operation == 'Update':
-                        print(f'Updated Estimate ID: {estimate_id}'.encode())
-                        print(get_sheet_values(config.google['spreadsheet_id'], 'Open Order Report!A1138:E1140'))
+                        purchase_order_num = estimate_data[3]
+                        print(purchase_order_num)
+                        update_sheet(config.google['spreadsheet_id'], purchase_order_num, estimate_data)
 
 def start_server():
     server_address = ('localhost', 9000)
