@@ -22,6 +22,6 @@ google = {
     'spreadsheet_id': '1fRHggwg7dhvj7447InWxbL2qY7mQLcys13e0iTN2E0s',
     'sheet_id': '1342435178',
     'sheet_name': 'Open Order Report',
-    'append_table_range': 'Open Order Report!A:E',
-    'data_lookup_range': 'Open Order Report!D:D'
+    'append_table_range': 'Open Order Report!A:F',
+    'data_lookup_range': 'Open Order Report!A:A'
 }

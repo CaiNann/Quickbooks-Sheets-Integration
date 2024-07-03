@@ -84,7 +84,6 @@ def get_estimate_data(id, auth_token, refresh_token):
         sales_order_num = data.get('Estimate').get('CustomField')[1].get('StringValue')
         if sales_order_num == None:
             sales_order_num = ' '
-        print(sales_order_num)
         date = data.get('Estimate').get('MetaData').get('CreateTime')
         date = format_date(date)
         customer = data.get('Estimate').get('CustomerRef').get('name')
@@ -98,7 +97,7 @@ def get_estimate_data(id, auth_token, refresh_token):
                 description.append(item.get('Description'))
         if len(description) != 0:
             description = ', '.join(description)
-        filteredData = [sales_order_num, date, customer, purchase_order_num, description]
+        filteredData = [id, sales_order_num, date, customer, purchase_order_num, description]
         return filteredData
     except requests.exceptions.HTTPError as http_err:
         if response.status_code == 401:
@@ -112,7 +111,6 @@ def get_estimate_data(id, auth_token, refresh_token):
                 sales_order_num = data.get('Estimate').get('CustomField')[1].get('StringValue')
                 if sales_order_num == None:
                     sales_order_num = ' '
-                print(sales_order_num)
                 date = data.get('Estimate').get('MetaData').get('CreateTime')
                 date = format_date(date)
                 customer = data.get('Estimate').get('CustomerRef').get('name')
@@ -126,7 +124,7 @@ def get_estimate_data(id, auth_token, refresh_token):
                         description.append(item.get('Description'))
                 if len(description) != 0:
                     description = ', '.join(description)
-                filteredData = [sales_order_num, date, customer, purchase_order_num, description]
+                filteredData = [id, sales_order_num, date, customer, purchase_order_num, description]
                 return filteredData
             else:
                 print("Failed to refresh token.")

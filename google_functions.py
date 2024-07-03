@@ -13,12 +13,11 @@ def get_sheet_values(id, range):
     ).execute()
     return sheet_values
 
-def update_sheet(id, purchase_order_num, values):
-    all_purchase_order_nums = get_sheet_values(id, config.google['data_lookup_range'])['values'][0]
-    for num in all_purchase_order_nums:
-        if num == purchase_order_num:
-            row = all_purchase_order_nums.index(num) + 1
-            print(row)
+def update_row(id, estimate_id, values):
+    all_estimate_ids = get_sheet_values(id, config.google['data_lookup_range'])['values'][0]
+    for num in all_estimate_ids:
+        if num == estimate_id:
+            row = all_estimate_ids.index(num) + 1
             break
     sheet_response = sheetsService.spreadsheets().values().update(
         spreadsheetId=id,
@@ -28,15 +27,19 @@ def update_sheet(id, purchase_order_num, values):
             'values': [values]
         }
     ).execute()
-    print(sheet_response)
+    return sheet_response
 
-def append_sheet(id, range, values):
+def append_row(id, values):
     sheet_response = sheetsService.spreadsheets().values().append(
         spreadsheetId=id, 
-        range=range,
+        range=config.google['append_table_range'],
         valueInputOption = 'USER_ENTERED',
         body={
             'values': [values]
         }
     ).execute()
     return sheet_response
+
+def delete_row(id, estimate_id):
+    values = [' ', ' ', ' ', ' ', ' ', ' ']
+    update_row(id, estimate_id, values)

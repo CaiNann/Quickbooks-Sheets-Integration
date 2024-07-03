@@ -58,19 +58,18 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 access_token = self.session.get('access_token')
                 refresh_token = self.session.get('refresh_token')
                 entities = parse_payload(payload)
+                print(entities)
                 for entity in entities:
-                    print(entity['lastUpdated'])
                     operation = entity['operation']
                     estimate_id = entity['id']
-                    estimate_data = get_estimate_data(estimate_id, access_token, refresh_token)
                     if operation == 'Delete':
-                        print(f'Deleted Estimate ID: {estimate_id}'.encode())
-                    elif operation == 'Create':
-                        append_sheet(config.google['spreadsheet_id'], config.google['append_table_range'], estimate_data)
+                        delete_row(config.google['spreadsheet_id'], estimate_id)
+                    else:
+                        estimate_data = get_estimate_data(estimate_id, access_token, refresh_token)
+                    if operation == 'Create':
+                        append_row(config.google['spreadsheet_id'], estimate_data)
                     elif operation == 'Update':
-                        purchase_order_num = estimate_data[3]
-                        print(purchase_order_num)
-                        update_sheet(config.google['spreadsheet_id'], purchase_order_num, estimate_data)
+                        update_row(config.google['spreadsheet_id'], estimate_id, estimate_data)
 
 def start_server():
     server_address = ('localhost', 9000)
