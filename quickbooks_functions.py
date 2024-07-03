@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 import hashlib, hmac, base64
 import requests
 from util import *
-from services import RequestHandler
+from dynamodb_functions import *
 
 auth = base64.b64encode(f"{config.quickbooks['client_id']}:{config.quickbooks['client_secret']}".encode()).decode('utf-8')
 
@@ -71,8 +71,8 @@ def parse_payload(payload):
         entities = data_change_event['entities']
     return entities
 
-def get_estimate_data(id, auth_token, refresh_token):
-    url = f'{config.quickbooks['sandbox_base_url']}/v3/company/{config.quickbooks['realm_id']}/estimate/{id}'
+def get_estimate_data(estimate_id, auth_token, refresh_token, user_id):
+    url = f'{config.quickbooks['sandbox_base_url']}/v3/company/{config.quickbooks['realm_id']}/estimate/{estimate_id}'
     headers = {
         'Accept': 'application/json',
         'Authorization': f'Bearer {auth_token}',
@@ -97,13 +97,13 @@ def get_estimate_data(id, auth_token, refresh_token):
                 description.append(item.get('Description'))
         if len(description) != 0:
             description = ', '.join(description)
-        filteredData = [id, sales_order_num, date, customer, purchase_order_num, description]
+        filteredData = [estimate_id, sales_order_num, date, customer, purchase_order_num, description]
         return filteredData
     except requests.exceptions.HTTPError as http_err:
         if response.status_code == 401:
             new_token = refresh_auth_token(refresh_token)
             if new_token:
-                RequestHandler.session['access_token'] = new_token
+                save_tokens_to_dynamodb(user_id, new_token, refresh_token)
                 headers['Authorization'] = f'Bearer {new_token}'
                 response = requests.get(url, headers=headers)
                 response.raise_for_status()
@@ -124,7 +124,7 @@ def get_estimate_data(id, auth_token, refresh_token):
                         description.append(item.get('Description'))
                 if len(description) != 0:
                     description = ', '.join(description)
-                filteredData = [id, sales_order_num, date, customer, purchase_order_num, description]
+                filteredData = [estimate_id, sales_order_num, date, customer, purchase_order_num, description]
                 return filteredData
             else:
                 print("Failed to refresh token.")
