@@ -56,8 +56,9 @@ def refresh_auth_token(refresh_token):
 
 def is_valid_payload(signature, payload):
     key = config.quickbooks['webhooks_verifier']
-    key_to_verify = key.encode('ascii')
-    hashed = hmac.new(key_to_verify, payload, hashlib.sha256).digest()
+    key_to_verify = key.encode('utf-8')
+    payload_bytes = payload.encode('utf-8')
+    hashed = hmac.new(key_to_verify, payload_bytes, hashlib.sha256).digest()
     hashed_base64 = base64.b64encode(hashed).decode()
 
     if signature == hashed_base64:

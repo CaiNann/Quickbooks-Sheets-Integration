@@ -1,7 +1,7 @@
 import boto3
 
 dynamodb = boto3.client('dynamodb')
-table_name = 'quickbooks_auth_tokens'
+table_name = 'quickbooks_info'
 
 def save_state_to_dynamodb(user_id, state):
     try:
@@ -29,6 +29,22 @@ def save_tokens_to_dynamodb(user_id, access_token, refresh_token):
         print(f"Saved tokens for user {user_id} to DynamoDB")
     except Exception as e:
         print(f"Error saving tokens to DynamoDB: {str(e)}")
+
+def get_state_from_dynamodb(user_id):
+    try:
+        response = dynamodb.get_item(
+            TableName=table_name,
+            Key={
+                'UserId': {'S': user_id}
+            }
+        )
+        if 'Item' in response:
+            return response['Item'].get('State', {}).get('S', '')
+        else:
+            return None
+    except Exception as e:
+        print(f"Error getting state from DynamoDB: {str(e)}")
+        return None
 
 def get_access_token_from_dynamodb(user_id):
     try:

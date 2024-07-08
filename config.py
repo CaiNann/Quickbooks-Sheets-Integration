@@ -1,7 +1,7 @@
 quickbooks = {
     'client_id' : 'ABELy2kJPVjKIaWycZKD8B9rF1fPLpMyxq5Y5zhgOY8jd5l4Fj',
     'client_secret' : '05EYhumz1oXvKQqiCOVsVYhCvUZ2OV4Pi688esWL',
-    'redirect_uri' : 'https://duckling-arriving-highly.ngrok-free.app/callback',
+    'redirect_uri' : 'https://uc5je1vv6h.execute-api.us-west-1.amazonaws.com/test/callback',
     'environment' : 'sandbox',
     'realm_id' : '9341452557106265',
     'token_endpoint' : 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',

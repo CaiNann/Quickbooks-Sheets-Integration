@@ -7,22 +7,23 @@ import json
 
 def lambda_handler(event, context):
     path = event['path']
-    query_params = event['queryStringParameters'] if 'queryStringParameters' in event else {}
-    body = event['body'] if 'body' in event else None
-    
+    user_id = event['requestContext']['accountId']
+    print(json.dumps(event))
+    print(context)
     if path == '/authUri':
         state = secrets.token_urlsafe(16)
-        save_state_to_dynamodb(context.session['userId'], state)
+        save_state_to_dynamodb(user_id, state)
         auth_url = authenticate(state)
         return {
             'statusCode': 302,
             'headers': {
                 'Location': auth_url
-            }
         }
+    }
     
-    elif path == '/callback':
-        if context.csrf_state != query_params.get('state', ''):
+    if path == '/callback':
+        query_params = event['queryStringParameters']
+        if get_state_from_dynamodb(user_id) != query_params.get('state', ''):
             return {
                 'statusCode': 400,
                 'body': 'CSRF Token mismatch'
@@ -34,10 +35,10 @@ def lambda_handler(event, context):
         if response.status_code == 200:
             access_token = response.json().get('access_token')
             refresh_token = response.json().get('refresh_token')
-            save_tokens_to_dynamodb(context.session['userId'], access_token, refresh_token)
+            save_tokens_to_dynamodb(user_id, access_token, refresh_token)
             return {
                 'statusCode': 200,
-                'body': json.dumps(response)
+                'body': json.dumps(response.json())
             }
         else:
             return {
@@ -45,11 +46,12 @@ def lambda_handler(event, context):
                 'body': f"Error: Token request failed [{response.status_code}]"
             }
     
-    elif path == '/webhook' and event['httpMethod'] == 'POST':
+    elif path == '/webhook':
         signature = event['headers']['intuit-signature']
+        body = event['body']
         if is_valid_payload(signature, body):
-            access_token = get_access_token_from_dynamodb(context.session['userId'])
-            refresh_token = get_refresh_token_from_dynamodb(context.session['userId'])
+            access_token = get_access_token_from_dynamodb(user_id)
+            refresh_token = get_refresh_token_from_dynamodb(user_id)
             
             entities = parse_payload(json.loads(body))
             for entity in entities:
@@ -59,7 +61,7 @@ def lambda_handler(event, context):
                 if operation == 'Delete':
                     delete_row(config.google['spreadsheet_id'], estimate_id)
                 else:
-                    estimate_data = get_estimate_data(estimate_id, access_token, refresh_token, context.session['userId'])
+                    estimate_data = get_estimate_data(estimate_id, access_token, refresh_token, user_id)
                     if operation == 'Create':
                         append_row(config.google['spreadsheet_id'], estimate_data)
                     elif operation == 'Update':
