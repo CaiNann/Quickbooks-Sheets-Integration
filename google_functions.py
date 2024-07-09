@@ -15,10 +15,14 @@ def get_sheet_values(id, range):
 
 def update_row(id, estimate_id, values):
     all_estimate_ids = get_sheet_values(id, config.google['data_lookup_range'])['values'][0]
+    row = None
     for num in all_estimate_ids:
         if num == estimate_id:
             row = all_estimate_ids.index(num) + 1
             break
+    if row == None:
+        print("Could not find row with given value " + estimate_id)
+        return 0
     sheet_response = sheetsService.spreadsheets().values().update(
         spreadsheetId=id,
         range=f'{config.google['sheet_name']}!A{row}',
@@ -42,4 +46,4 @@ def append_row(id, values):
 
 def delete_row(id, estimate_id):
     values = [' ', ' ', ' ', ' ', ' ', ' ']
-    update_row(id, estimate_id, values)
+    return update_row(id, estimate_id, values)
