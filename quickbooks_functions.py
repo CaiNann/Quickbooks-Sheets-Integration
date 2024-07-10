@@ -4,6 +4,10 @@ import hashlib, hmac, base64
 import requests
 from util import *
 from dynamodb_functions import *
+import time
+
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 1
 
 auth = base64.b64encode(f"{config.quickbooks['client_id']}:{config.quickbooks['client_secret']}".encode()).decode('utf-8')
 
@@ -18,7 +22,7 @@ def authenticate(state):
     auth_url = f'{config.quickbooks['authorization_endpoint']}?{urlencode(params)}'
     return auth_url
 
-def authorize(code):
+def authorize(code, user_id, realm_id):
     post_body = {
         'url': config.quickbooks['token_endpoint'],
         'headers': {
@@ -33,8 +37,28 @@ def authorize(code):
         }
     }
 
-    response = requests.post(post_body['url'], headers=post_body['headers'], data=post_body['data'])
-    return response
+    retries = 0
+
+    while retries < MAX_RETRIES:
+        response = requests.post(post_body['url'], headers=post_body['headers'], data=post_body['data'])
+        if response.status_code == 200:
+            delete_state_from_dynamodb(user_id)
+            access_token = response.json().get('access_token')
+            refresh_token = response.json().get('refresh_token')
+            save_tokens_to_dynamodb(realm_id, access_token, refresh_token)
+            return {
+                'statusCode': 200,
+                'body': 'Tokens successfully received'
+            }
+        else:
+            retries += 1
+            if retries < MAX_RETRIES:
+                time.sleep(RETRY_DELAY_SECONDS)
+            else:
+                return {
+                    'statusCode': 500,
+                    'body': f"Error: Token request failed [{response.status_code}]"
+                }
 
 def refresh_auth_token(refresh_token):
     post_body = {
@@ -65,15 +89,8 @@ def is_valid_payload(signature, payload):
         return True
     return False
 
-def parse_payload(payload):
-    event_notifications = payload['eventNotifications']
-    for notification in event_notifications:
-        data_change_event = notification['dataChangeEvent']
-        entities = data_change_event['entities']
-    return entities
-
-def get_estimate_data(estimate_id, auth_token, refresh_token, user_id):
-    url = f'{config.quickbooks['sandbox_base_url']}/v3/company/{config.quickbooks['realm_id']}/estimate/{estimate_id}'
+def get_estimate_data(estimate_id, auth_token, refresh_token, realm_id):
+    url = f'{config.quickbooks['sandbox_base_url']}/v3/company/{realm_id}/estimate/{estimate_id}'
     headers = {
         'Accept': 'application/json',
         'Authorization': f'Bearer {auth_token}',
@@ -104,7 +121,7 @@ def get_estimate_data(estimate_id, auth_token, refresh_token, user_id):
         if response.status_code == 401:
             new_token = refresh_auth_token(refresh_token)
             if new_token:
-                save_tokens_to_dynamodb(user_id, new_token, refresh_token)
+                save_tokens_to_dynamodb(realm_id, new_token, refresh_token)
                 headers['Authorization'] = f'Bearer {new_token}'
                 response = requests.get(url, headers=headers)
                 response.raise_for_status()

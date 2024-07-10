@@ -30,43 +30,31 @@ def lambda_handler(event, context):
             }
         
         code = query_params.get('code', '')
-        response = authorize(code)
-        
-        if response.status_code == 200:
-            access_token = response.json().get('access_token')
-            refresh_token = response.json().get('refresh_token')
-            save_tokens_to_dynamodb(user_id, access_token, refresh_token)
-            return {
-                'statusCode': 200,
-                'body': json.dumps(response.json())
-            }
-        else:
-            return {
-                'statusCode': 500,
-                'body': f"Error: Token request failed [{response.status_code}]"
-            }
+        realm_id = query_params.get('realmId', '')
+        authorize(code, user_id, realm_id)
     
     elif path == '/webhook':
         signature = event['headers']['intuit-signature']
         body = event['body']
         if is_valid_payload(signature, body):
-            access_token = get_access_token_from_dynamodb(user_id)
-            refresh_token = get_refresh_token_from_dynamodb(user_id)
-            
-            entities = parse_payload(json.loads(body))
-            for entity in entities:
-                operation = entity['operation']
-                estimate_id = entity['id']
+            body = json.loads(event['body'])
+            for event in body['eventNotifications']:
+                realm_id = event['realmId']
+                access_token = get_access_token_from_dynamodb(realm_id)
+                refresh_token = get_refresh_token_from_dynamodb(realm_id)
                 
-                if operation == 'Delete':
-                    delete_row(config.google['spreadsheet_id'], estimate_id)
-                else:
-                    estimate_data = get_estimate_data(estimate_id, access_token, refresh_token, user_id)
-                    if operation == 'Create':
-                        append_row(config.google['spreadsheet_id'], estimate_data)
-                    elif operation == 'Update':
-                        update_row(config.google['spreadsheet_id'], estimate_id, estimate_data)
-            
+                for entity in event['dataChangeEvent']['entities']:
+                    operation = entity['operation']
+                    estimate_id = entity['id']
+                    
+                    if operation == 'Delete':
+                        delete_row(config.google['spreadsheet_id'], estimate_id)
+                    else:
+                        estimate_data = get_estimate_data(estimate_id, access_token, refresh_token, realm_id)
+                        if operation == 'Create':
+                            append_row(config.google['spreadsheet_id'], estimate_data)
+                        elif operation == 'Update':
+                            update_row(config.google['spreadsheet_id'], estimate_id, estimate_data)
             return {
                 'statusCode': 200,
                 'body': 'Payload processed successfully'
@@ -76,7 +64,19 @@ def lambda_handler(event, context):
                 'statusCode': 403,
                 'body': 'Invalid payload signature'
             }
-    
+    elif path == '/disconnect':
+        query_params = event['queryStringParameters']
+        realm_id = query_params.get('realmId', '')
+        response = delete_company_from_dynamodb(realm_id)
+        if response.status_code == 200:
+            return {
+                'statusCode': 200,
+                'body': 'Success'
+            }
+        else:
+            return {
+                'statusCode': response.status_code
+            }
     else:
         return {
             'statusCode': 404,
