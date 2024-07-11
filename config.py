@@ -1,14 +1,14 @@
 quickbooks = {
-    'client_id' : 'ABELy2kJPVjKIaWycZKD8B9rF1fPLpMyxq5Y5zhgOY8jd5l4Fj',
-    'client_secret' : '05EYhumz1oXvKQqiCOVsVYhCvUZ2OV4Pi688esWL',
+    'client_id' : 'ABwblY4MTowT4spKu9ugot5tS7RmEbgjK80O6sRrVEgkdrMqbw',
+    'client_secret' : 'efdHsrI7HCtwgXcbL6T5gDh9tjth732W8yjdcXeE',
     'redirect_uri' : 'https://uc5je1vv6h.execute-api.us-west-1.amazonaws.com/test/callback',
-    'environment' : 'sandbox',
+    'environment' : 'production',
     'realm_id' : '9341452557106265',
     'token_endpoint' : 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
     'authorization_endpoint' : 'https://appcenter.intuit.com/connect/oauth2',
     'production_base_url' : 'https://quickbooks.api.intuit.com',
     'sandbox_base_url' : 'https://sandbox-quickbooks.api.intuit.com',
-    'webhooks_verifier' : '0b3b3680-fd06-4141-be03-c506fee30b82',
+    'webhooks_verifier' : '27b0daba-99c7-4e27-8188-d86c60c5cb48',
     'scopes' : ['com.intuit.quickbooks.accounting'],
 }
 

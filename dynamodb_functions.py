@@ -37,10 +37,8 @@ def delete_company_from_dynamodb(realm_id):
             }
         )
         print(f"Deleted company from DynamoDB")
-        return response
     except Exception as e:
         print(f"Error deleting company from DynamoDB: {str(e)}")
-        return response
 
 def save_tokens_to_dynamodb(realm_id, access_token, refresh_token):
     try:
@@ -53,10 +51,8 @@ def save_tokens_to_dynamodb(realm_id, access_token, refresh_token):
             }
         )
         print(f"Saved tokens for comapny {realm_id} to DynamoDB")
-        return response
     except Exception as e:
         print(f"Error saving tokens to DynamoDB: {str(e)}")
-        return response
 
 def get_state_from_dynamodb(realm_id):
     try:

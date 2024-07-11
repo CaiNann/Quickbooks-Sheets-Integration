@@ -90,7 +90,7 @@ def is_valid_payload(signature, payload):
     return False
 
 def get_estimate_data(estimate_id, auth_token, refresh_token, realm_id):
-    url = f'{config.quickbooks['sandbox_base_url']}/v3/company/{realm_id}/estimate/{estimate_id}'
+    url = f'{config.quickbooks['production_base_url']}/v3/company/{realm_id}/estimate/{estimate_id}'
     headers = {
         'Accept': 'application/json',
         'Authorization': f'Bearer {auth_token}',

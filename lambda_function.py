@@ -31,7 +31,7 @@ def lambda_handler(event, context):
         
         code = query_params.get('code', '')
         realm_id = query_params.get('realmId', '')
-        authorize(code, user_id, realm_id)
+        return authorize(code, user_id, realm_id)
     
     elif path == '/webhook':
         signature = event['headers']['intuit-signature']
@@ -67,15 +67,10 @@ def lambda_handler(event, context):
     elif path == '/disconnect':
         query_params = event['queryStringParameters']
         realm_id = query_params.get('realmId', '')
-        response = delete_company_from_dynamodb(realm_id)
-        if response.status_code == 200:
-            return {
+        delete_company_from_dynamodb(realm_id)
+        return {
                 'statusCode': 200,
                 'body': 'Success'
-            }
-        else:
-            return {
-                'statusCode': response.status_code
             }
     else:
         return {
