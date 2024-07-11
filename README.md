@@ -1,5 +1,3 @@
 # Quickbooks-Sheets-Integration
 
-To use for your own purposes:
-
-Go to config.py and update client_id, client_secret, redirect_uri, environment, realm_id, webhooks_verifier with your personal quickbooks information. Then update service_account_file, spreadsheet_id, append_table_range with your personal google information
+This is the source code for a published app on Quickbooks which integrates with Google Sheets to automatically update a sheet with operations that are performed on estimates in a user's Quickbooks company. I used AWS Lambda alongside AWS API Gateway to invoke the script according to certain https endpoints, and I stored authorization and authentication information securely using AWS DynamoDB. A google service account is used to read and edit a google sheet. It is specifically designed for the needs of my company, and can not easily be repurposed for personal use by any means.
